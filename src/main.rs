@@ -1,12 +1,21 @@
+use vector::Vector3;
+
+mod vector;
+
 fn main() {
-    let mut x = 5;
-    let y: i32 = 5;
+    let vec = Vector3 {
+        x: 10.0,
+        y: 20.0
+    };
 
-    x = 6;
+    vec.print();
 
-    println!("{}", x + y);
-}
+    let vec2 = Vector3 {
+        x: 5,
+        y: 6
+    };
 
-fn sum(a: i32, b: i32) {
-    return a + b;
+    // let result = vec.add(vec2);
+
+    let mag = vec.magnitude();
 }
