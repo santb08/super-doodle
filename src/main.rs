@@ -1,5 +1,6 @@
 use state::State;
 use winit::{window::WindowBuilder, event_loop::{EventLoop, ControlFlow}, event::{Event, WindowEvent, KeyboardInput, ElementState, VirtualKeyCode}};
+mod texture;
 
 mod state;
 

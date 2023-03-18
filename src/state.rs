@@ -1,8 +1,8 @@
 use game_engine::{VERTICES, Vertex, INDICES};
-use wgpu::util::DeviceExt;
-// lib.rs
+use wgpu::{util::DeviceExt, BindGroupDescriptor, BindGroupEntry, BindingResource};
 use winit::{window::Window, event::{WindowEvent, KeyboardInput, VirtualKeyCode, ElementState}};
 
+use crate::texture;
 pub struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -11,12 +11,17 @@ pub struct State {
     pub size: winit::dpi::PhysicalSize<u32>,
     window: Window,
 
-    use_color: bool,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     num_vertices: u32,
     index_buffer: wgpu::Buffer, 
     num_indices: u32,
+
+    diffuse_bind_group: wgpu::BindGroup,
+    diffuse_texture: texture::Texture, // NEW
+
+    is_space_pressed: bool,
+    challenge_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -80,18 +85,90 @@ impl State {
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
         };
+
         surface.configure(&device, &config);
+
+        let diffuse_bytes = include_bytes!("happy-tree.png"); // CHANGED!
+        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap(); // CHANGED!
+        
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        // This should match the filterable field of the
+                        // corresponding Texture entry above.
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
+
+        let diffuse_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view), // CHANGED!
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler), // CHANGED!
+                    }
+                ],
+                label: Some("diffuse_bind_group"),
+            }
+        );
+
+        // TODO: Remove challenge
+        let challenge_image_bytes = include_bytes!("feid.jpg");
+        let challenge_texture = texture::Texture::from_bytes(
+            &device, 
+            &queue,
+            challenge_image_bytes, 
+            "feid.jpg").unwrap();
+        
+        let challenge_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&challenge_texture.view), // CHANGED!
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&challenge_texture.sampler), // CHANGED!
+                    }
+                ],
+                label: Some("Ferxxo Mor"),
+            }
+        );
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        let render_pipeline_layout =device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
+        let render_pipeline_layout = device.create_pipeline_layout(
+            &wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
         
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -139,7 +216,7 @@ impl State {
             multiview: None,
         });   
         
-        let use_color = true;
+        let is_space_pressed = true;
 
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -158,7 +235,7 @@ impl State {
         );
 
         let num_indices = INDICES.len() as u32;
-        
+
         Self {
             window,
             num_vertices,
@@ -167,11 +244,14 @@ impl State {
             queue,
             config,
             size,
-            use_color,
+            is_space_pressed,
             vertex_buffer,
             render_pipeline,
             num_indices,
-            index_buffer
+            index_buffer,
+            diffuse_bind_group,
+            diffuse_texture,
+            challenge_bind_group
         }
     }
 
@@ -187,8 +267,7 @@ impl State {
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
         }
-    }
-    
+    }  
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
         return match event {
@@ -205,7 +284,7 @@ impl State {
                     },
                 ..
             } => {
-                self.use_color = *state == ElementState::Released;
+                self.is_space_pressed = *state == ElementState::Released;
                 true
             }
             _ => false
@@ -249,12 +328,14 @@ impl State {
                 depth_stencil_attachment: None,
             });
 
-            // NEW!
-            println!("{}", self.use_color);
             render_pass.set_pipeline(&self.render_pipeline);
             
             // we need to actually set the vertex buffer in the render method otherwise our program will crash.
+
+            let bind_group = if self.is_space_pressed { &self.diffuse_bind_group } else { &self.challenge_bind_group };
+
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_bind_group(0, bind_group, &[]); // NEW!
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // 2.
         }

@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.70"
 bytemuck = { "version" = "1.13.1", "features" = ["derive"] } 
 ecs = "0.23.1"
+image = "0.24.5"
 pollster = "0.3.0"
 wgpu = "0.15.1"
 winit = "0.28.2"
