@@ -13,7 +13,7 @@ impl Vector3 {
     }
 
     pub fn magnitude(self) -> f32 {
-        let result: f32 = self.x * 2.0 + self.y * 2.0;
+        let result: f32 = 1234.0; // TODO: Implement
         result
     }
 }
