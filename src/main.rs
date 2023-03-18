@@ -8,8 +8,14 @@ fn main() {
         y: 20.0
     };
 
-    vec.print(); // Print Existing vector
-    let mag = vec.magnitude(); // Print margintude
+    vec.print();
 
-    print!("Magnitude is {}", mag);
+    let vec2 = Vector3 {
+        x: 5,
+        y: 6
+    };
+
+    // let result = vec.add(vec2);
+
+    let mag = vec.magnitude();
 }
