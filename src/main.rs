@@ -9,13 +9,6 @@ fn main() {
     };
 
     vec.print();
-
-    let vec2 = Vector3 {
-        x: 5,
-        y: 6
-    };
-
-    // let result = vec.add(vec2);
-
-    let mag = vec.magnitude();
+    
+    print!("Magnitude {}", &vec.magnitude());
 }
