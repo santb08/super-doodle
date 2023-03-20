@@ -11,20 +11,26 @@ impl Vector3 {
     pub fn magnitude(&self) -> f32 {
         (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()
     }
-
-    pub fn add(&self, v2: &Vector3) -> Vector3 {
-        let x = self.x + v2.x;
-        let y = self.y + v2.y;
+    
+    pub fn add(&self, v2: &Vector3) -> Vector3{   
+        let x= self.x + v2.x;
+        let y= self.y + v2.y;
         // Creamos un nuevo vector `resultado` vacío para almacenar la suma de los vectores
-        let result: Vector3 = Vector3 { x, y };
+        let result: Vector3 = Vector3{
+            x,
+            y,
+        };
         return result;
     }
 
-    pub fn sub(&self, v2: &Vector3) -> Vector3 {
-        let x = self.x - v2.x;
-        let y = self.y - v2.y;
+    pub fn sub(&self, v2: &Vector3) -> Vector3{
+        let x= self.x - v2.x;
+        let y= self.y - v2.y;
         // Creamos un nuevo vector `resultado` vacío para almacenar la suma de los vectores
-        let result: Vector3 = Vector3 { x, y };
+        let result: Vector3 = Vector3{
+            x,
+            y,
+        };
         return result;
     }
 
@@ -37,4 +43,6 @@ impl Vector3 {
         let cos_angle = dot_product / mag_product;
         Some(cos_angle.acos())
     }
+
+
 }
