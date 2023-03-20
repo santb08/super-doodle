@@ -46,3 +46,15 @@ impl Vector3 {
 
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn magnitude() {
+        let vec1 = Vector3 { x: 2.0, y: 2.0 };
+
+        assert_eq!(vec1.magnitude(), 2.0);
+    }
+}
